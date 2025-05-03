@@ -94,6 +94,9 @@ class InfoDisplay:
         self.row = 0
         self.labels = {}
         self.values = {}
+        
+        # Configure the frame for better responsiveness
+        self.frame.columnconfigure(1, weight=1)
     
     def add_field(self, key, label_text, initial_value="", wraplength=300):
         """
@@ -127,6 +130,16 @@ class InfoDisplay:
         if key in self.values:
             self.values[key].set(value)
     
+    def update(self, **kwargs):
+        """
+        Update multiple fields at once.
+        
+        Args:
+            **kwargs: Key-value pairs to update
+        """
+        for key, value in kwargs.items():
+            self.update_field(key, value)
+    
     def grid(self, **kwargs):
         """Grid the component."""
         self.frame.grid(**kwargs)
@@ -155,9 +168,13 @@ class ScrolledTextOutput:
         else:
             self.frame = ttk.Frame(parent, padding=5)
         
+        # Make the frame responsive
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.rowconfigure(0, weight=1)
+        
         self.text = scrolledtext.ScrolledText(
             self.frame, wrap=tk.WORD, width=width, height=height)
-        self.text.pack(fill=tk.BOTH, expand=True)
+        self.text.grid(row=0, column=0, sticky="nsew")
         
         self.readonly = readonly
         if readonly:
@@ -222,42 +239,50 @@ class ResourceDisplayPanel:
         """
         self.frame = ttk.LabelFrame(parent, text=title, padding=padding)
         
+        # Make the frame responsive
+        self.frame.columnconfigure(1, weight=1)
+        
+        # Resource labels with better visual styling
+        style = ttk.Style()
+        style.configure("Resource.TLabel", foreground="#555555", font=("TkDefaultFont", 9, "bold"))
+        style.configure("ResourceValue.TLabel", foreground="#333333")
+        
         # CPU usage
-        ttk.Label(self.frame, text="CPU:").grid(row=0, column=0, sticky="w")
+        ttk.Label(self.frame, text="CPU:", style="Resource.TLabel").grid(row=0, column=0, sticky="w", pady=(5, 2))
         self.cpu_var = tk.StringVar(value="0%")
-        ttk.Label(self.frame, textvariable=self.cpu_var).grid(row=0, column=1, sticky="w")
+        ttk.Label(self.frame, textvariable=self.cpu_var, style="ResourceValue.TLabel").grid(row=0, column=1, sticky="w", pady=(5, 2))
         
         # RAM usage
-        ttk.Label(self.frame, text="RAM:").grid(row=1, column=0, sticky="w")
+        ttk.Label(self.frame, text="RAM:", style="Resource.TLabel").grid(row=1, column=0, sticky="w", pady=2)
         self.ram_var = tk.StringVar(value="0%")
-        ttk.Label(self.frame, textvariable=self.ram_var).grid(row=1, column=1, sticky="w")
+        ttk.Label(self.frame, textvariable=self.ram_var, style="ResourceValue.TLabel").grid(row=1, column=1, sticky="w", pady=2)
         
         # GPU usage
-        ttk.Label(self.frame, text="GPU:").grid(row=2, column=0, sticky="w")
+        ttk.Label(self.frame, text="GPU:", style="Resource.TLabel").grid(row=2, column=0, sticky="w", pady=(2, 5))
         self.gpu_var = tk.StringVar(value="N/A")
-        ttk.Label(self.frame, textvariable=self.gpu_var).grid(row=2, column=1, sticky="w")
+        ttk.Label(self.frame, textvariable=self.gpu_var, style="ResourceValue.TLabel").grid(row=2, column=1, sticky="w", pady=(2, 5))
     
-    def update(self, cpu_percent, ram_percent, ram_used_mb=None, gpu_percent=None):
+    def update(self, resource_data):
         """
-        Update resource values.
+        Update resource values using a dictionary.
         
         Args:
-            cpu_percent: CPU usage percentage
-            ram_percent: RAM usage percentage
-            ram_used_mb: RAM used in MB (optional)
-            gpu_percent: GPU usage percentage (optional)
+            resource_data: Dictionary with cpu, ram, ram_mb, and gpu keys
         """
-        self.cpu_var.set(f"{cpu_percent:.1f}%")
+        if 'cpu' in resource_data:
+            self.cpu_var.set(f"{resource_data['cpu']:.1f}%")
         
-        if ram_used_mb:
-            self.ram_var.set(f"{ram_percent:.1f}% ({ram_used_mb:.0f} MB)")
-        else:
-            self.ram_var.set(f"{ram_percent:.1f}%")
+        if 'ram' in resource_data:
+            ram_text = f"{resource_data['ram']:.1f}%"
+            if 'ram_mb' in resource_data:
+                ram_text += f" ({resource_data['ram_mb']:.0f} MB)"
+            self.ram_var.set(ram_text)
         
-        if gpu_percent is not None:
-            self.gpu_var.set(f"{gpu_percent:.1f}%")
-        else:
-            self.gpu_var.set("N/A")
+        if 'gpu' in resource_data:
+            if resource_data['gpu'] is not None:
+                self.gpu_var.set(f"{resource_data['gpu']:.1f}%")
+            else:
+                self.gpu_var.set("N/A")
     
     def grid(self, **kwargs):
         """Grid the component."""
@@ -281,6 +306,10 @@ class ResourceGraphs:
         """
         self.frame = ttk.LabelFrame(parent, text=title)
         
+        # Configure frame for responsiveness
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.rowconfigure(0, weight=1)
+        
         # Create matplotlib figure with three subplots
         self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3, 1, figsize=(10, 6), sharex=True)
         self.ax1.set_ylabel('CPU %')
@@ -293,10 +322,21 @@ class ResourceGraphs:
         self.ax2.set_ylim(0, 100)
         self.ax3.set_ylim(0, 100)
         
+        # Add grids to the plots for better readability
+        self.ax1.grid(True, linestyle='--', alpha=0.7)
+        self.ax2.grid(True, linestyle='--', alpha=0.7)
+        self.ax3.grid(True, linestyle='--', alpha=0.7)
+        
+        # Set background colors for better look
+        self.fig.set_facecolor('#f5f5f5')
+        self.ax1.set_facecolor('#f9f9f9')
+        self.ax2.set_facecolor('#f9f9f9')
+        self.ax3.set_facecolor('#f9f9f9')
+        
         # Create canvas
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.frame)
         self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.pack(fill=tk.BOTH, expand=True)
+        self.canvas_widget.grid(row=0, column=0, sticky="nsew")
         
         # Initial empty data
         self.timestamps = []
@@ -336,11 +376,16 @@ class ResourceGraphs:
         self.ax2.set_ylim(0, 100)
         self.ax3.set_ylim(0, 100)
         
+        # Add grids back
+        self.ax1.grid(True, linestyle='--', alpha=0.7)
+        self.ax2.grid(True, linestyle='--', alpha=0.7)
+        self.ax3.grid(True, linestyle='--', alpha=0.7)
+        
         # Plot the data
         if timestamps:
-            self.ax1.plot(timestamps, cpu_data, color='blue')
-            self.ax2.plot(timestamps, ram_data, color='green')
-            self.ax3.plot(timestamps, gpu_data, color='red')
+            self.ax1.plot(timestamps, cpu_data, color='#3465a4', linewidth=2)
+            self.ax2.plot(timestamps, ram_data, color='#4e9a06', linewidth=2)
+            self.ax3.plot(timestamps, gpu_data, color='#cc0000', linewidth=2)
         
         # Update the canvas
         self.canvas.draw()
@@ -366,8 +411,7 @@ class StatusBar:
         """
         self.var = tk.StringVar()
         self.label = ttk.Label(
-            parent, textvariable=self.var, relief=tk.SUNKEN, anchor=tk.W)
-        # Remove this line: self.label.pack(fill=tk.X, side=tk.BOTTOM, pady=2)
+            parent, textvariable=self.var, relief=tk.SUNKEN, anchor=tk.W, padding=(5, 2))
         self.set("Ready")
     
     def set(self, text):
@@ -387,7 +431,6 @@ class StatusBar:
         """Pack the component."""
         self.label.pack(**kwargs)
     
-    # In components.py - StatusBar class
     def set_status(self, text):
         """Alias of set() for compatibility."""
         self.set(text)
@@ -408,10 +451,17 @@ class ChatHistory:
         """
         self.frame = ttk.LabelFrame(parent, text=title, padding=10)
         
+        # Configure frame for responsiveness
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.rowconfigure(0, weight=1)
+        
         self.text = scrolledtext.ScrolledText(
             self.frame, wrap=tk.WORD, width=width, height=height)
-        self.text.pack(fill=tk.BOTH, expand=True)
+        self.text.grid(row=0, column=0, sticky="nsew")
         self.text.config(state=tk.DISABLED)
+        
+        # Add clear button
+        ttk.Button(self.frame, text="Clear History", command=self.clear).grid(row=1, column=0, sticky="e", pady=(5, 0))
     
     def add_qa(self, question, answer):
         """
@@ -458,11 +508,14 @@ class ModelSelector:
         """
         self.frame = ttk.Frame(parent)
         
+        # Configure frame for responsiveness
+        self.frame.columnconfigure(1, weight=1)
+        
         ttk.Label(self.frame, text=label_text).grid(row=0, column=0, sticky="w", pady=5)
         
         self.var = tk.StringVar(value="")
         self.dropdown = ttk.Combobox(self.frame, textvariable=self.var, width=width)
-        self.dropdown.grid(row=0, column=1, padx=5, pady=5)
+        self.dropdown.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
         
         if refresh_command:
             ttk.Button(self.frame, text="Refresh", command=refresh_command).grid(

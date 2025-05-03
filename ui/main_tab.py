@@ -348,7 +348,16 @@ class MainTab(ttk.Frame):
         """Update the resource usage info in the UI."""
         try:
             usage = self.resource_monitor.get_current_usage()
-            self.resource_display.update(usage)
+            
+            # Format the data for ResourceDisplayPanel's update method
+            resource_data = {
+                'cpu': usage['cpu_percent'],
+                'ram': usage['ram_percent'],
+                'ram_mb': usage['ram_used_mb'],
+                'gpu': usage['gpu_percent'] if usage['gpu_available'] else None
+            }
+            
+            self.resource_display.update(resource_data)
         except Exception as e:
             print(f"Error updating resource info: {e}")
             
